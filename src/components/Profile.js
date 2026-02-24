@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { auth, db } from "../firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { signOut, onAuthStateChanged } from "firebase/auth";
@@ -10,49 +10,65 @@ function Profile() {
   const [totalPaid, setTotalPaid] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  // ✅ ใช้ useCallback ป้องกัน re-render function ใหม่ทุกครั้ง
+  const fetchStats = useCallback(async (currentUser) => {
+    try {
+      const q = query(
+        collection(db, "bookings"),
+        where("userId", "==", currentUser.uid)
+      );
+
+      const snapshot = await getDocs(q);
+
+      let count = 0;
+      let paidAmount = 0;
+
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        count++;
+
+        if (data.status === "paid") {
+          paidAmount += Number(data.price) || 0;
+        }
+      });
+
+      setTotalBookings(count);
+      setTotalPaid(paidAmount);
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    }
+  }, []);
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      setLoading(false);
 
       if (currentUser) {
-        fetchStats(currentUser);
+        await fetchStats(currentUser);
+      } else {
+        // reset ค่าถ้า logout
+        setTotalBookings(0);
+        setTotalPaid(0);
       }
+
+      setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
-
-  const fetchStats = async (currentUser) => {
-    const q = query(
-      collection(db, "bookings"),
-      where("userId", "==", currentUser.uid)
-    );
-
-    const snapshot = await getDocs(q);
-
-    let count = 0;
-    let paidAmount = 0;
-
-    snapshot.forEach((doc) => {
-      count++;
-      if (doc.data().status === "paid") {
-        paidAmount += Number(doc.data().price) || 0;
-      }
-    });
-
-    setTotalBookings(count);
-    setTotalPaid(paidAmount);
-  };
+  }, [fetchStats]);
 
   const handleLogout = async () => {
-    await signOut(auth);
-    Swal.fire("ออกจากระบบแล้ว", "", "success");
-    window.location.href = "/login";
+    try {
+      await signOut(auth);
+      await Swal.fire("ออกจากระบบแล้ว", "", "success");
+      window.location.href = "/login";
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (!user) return <div>กรุณาเข้าสู่ระบบ</div>;
+  if (loading) return <div className="p-10 text-center">Loading...</div>;
+  if (!user) return <div className="p-10 text-center">กรุณาเข้าสู่ระบบ</div>;
 
   return (
     <div className="min-h-screen bg-gray-100 flex justify-center items-center p-6">

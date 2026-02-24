@@ -59,26 +59,28 @@ function Booking() {
       return;
     }
 
-    await addDoc(collection(db, "bookings"), {
-      userId: auth.currentUser.uid,
-      userEmail: auth.currentUser.email,
-      date,
-      court,
-      time: selected,
-      price: pricePerHour,
-      status: "pending",
-      createdAt: serverTimestamp(),
-    });
+   await addDoc(collection(db, "bookings"), {
+  userId: auth.currentUser.uid,
+  userEmail: auth.currentUser.email,
+  date,
+  court,
+  time: selected,
+  price: pricePerHour,
+  status: "pending",
+  createdAt: serverTimestamp(),
+});
 
-    Swal.fire({
-      icon: "success",
-      title: "จองสำเร็จ 🎉",
-      text: "สถานะ: รอชำระเงิน",
-      confirmButtonColor: "#16a34a",
-    });
+Swal.fire({
+  icon: "success",
+  title: "จองสำเร็จ 🎉",
+  text: "สถานะ: รอชำระเงิน",
+  confirmButtonColor: "#16a34a",
+});
 
-    setSelected("");
-    setDate(date);
+
+setSlots([...slots, selected]);
+
+setSelected("");
   };
 
   return (

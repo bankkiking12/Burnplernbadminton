@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { auth, db } from "../firebase";
 import {
   collection,
@@ -18,22 +18,9 @@ function MyBookings() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ โหลด user ให้ถูกต้อง
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
+  const fetchBookings = useCallback(async (currentUser) => {
+    if (!currentUser) return;
 
-      if (currentUser) {
-        fetchBookings(currentUser);
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  // ✅ ย้ายขึ้นมาก่อนเรียกใช้
-  const fetchBookings = async (currentUser) => {
     try {
       const q = query(
         collection(db, "bookings"),
@@ -51,8 +38,22 @@ function MyBookings() {
       setBookings(data);
     } catch (error) {
       console.error("Error fetching bookings:", error);
+      Swal.fire("เกิดข้อผิดพลาด", "โหลดข้อมูลไม่สำเร็จ", "error");
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+
+      if (currentUser) {
+        await fetchBookings(currentUser);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [fetchBookings]);
 
   const handlePayment = async (booking) => {
     const confirm = await Swal.fire({
@@ -65,12 +66,20 @@ function MyBookings() {
     });
 
     if (confirm.isConfirmed) {
-      await updateDoc(doc(db, "bookings", booking.id), {
-        status: "paid",
-      });
+      try {
+        await updateDoc(doc(db, "bookings", booking.id), {
+          status: "paid",
+        });
 
-      Swal.fire("ชำระเงินสำเร็จ 🎉", "", "success");
-      fetchBookings(user);
+        Swal.fire("ชำระเงินสำเร็จ 🎉", "", "success");
+
+        if (user) {
+          fetchBookings(user);
+        }
+      } catch (error) {
+        console.error(error);
+        Swal.fire("ผิดพลาด", "ไม่สามารถอัปเดตสถานะได้", "error");
+      }
     }
   };
 
@@ -91,9 +100,17 @@ function MyBookings() {
     });
 
     if (confirm.isConfirmed) {
-      await deleteDoc(doc(db, "bookings", booking.id));
-      Swal.fire("ยกเลิกสำเร็จ", "", "success");
-      fetchBookings(user);
+      try {
+        await deleteDoc(doc(db, "bookings", booking.id));
+        Swal.fire("ยกเลิกสำเร็จ", "", "success");
+
+        if (user) {
+          fetchBookings(user);
+        }
+      } catch (error) {
+        console.error(error);
+        Swal.fire("ผิดพลาด", "ไม่สามารถลบรายการได้", "error");
+      }
     }
   };
 
@@ -142,15 +159,8 @@ function MyBookings() {
                 <p className="font-bold text-lg">
                   🏸 คอร์ท {booking.court}
                 </p>
-
-                <p className="text-gray-600">
-                  📅 {booking.date}
-                </p>
-
-                <p className="text-gray-600">
-                  ⏰ {booking.time}
-                </p>
-
+                <p className="text-gray-600">📅 {booking.date}</p>
+                <p className="text-gray-600">⏰ {booking.time}</p>
                 <p className="text-gray-800 font-semibold mt-2">
                   💰 {booking.price} บาท
                 </p>

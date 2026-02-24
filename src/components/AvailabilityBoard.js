@@ -15,33 +15,29 @@ function AvailabilityBoard() {
     "20:00 - 21:00","21:00 - 22:00",
   ];
 
- useEffect(() => {
-  if (!date) return;
-
-  const fetchBookings = async () => {
-    const q = query(
-      collection(db, "bookings"),
-      where("date", "==", date)
-    );
-
-    const res = await getDocs(q);
-    setBookings(res.docs.map((d) => d.data()));
-  };
-
-  fetchBookings();
-}, [date]);
-
+  // ✅ ใช้ตัวเดียวพอ
   const fetchBookings = useCallback(async () => {
-  if (!date) return;
+    if (!date) {
+      setBookings([]);
+      return;
+    }
 
-  const q = query(
-    collection(db, "bookings"),
-    where("date", "==", date)
-  );
+    try {
+      const q = query(
+        collection(db, "bookings"),
+        where("date", "==", date)
+      );
 
-  const res = await getDocs(q);
-  setBookings(res.docs.map((d) => d.data()));
-}, [date]);
+      const res = await getDocs(q);
+      setBookings(res.docs.map((d) => d.data()));
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+    }
+  }, [date]);
+
+  useEffect(() => {
+    fetchBookings();
+  }, [fetchBookings]);
 
   const isBooked = (court, time) => {
     return bookings.some(
@@ -55,11 +51,10 @@ function AvailabilityBoard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black p-24 text-white">
-
       <div className="max-w-7xl mx-auto backdrop-blur-lg bg-white/10 border border-white/20 rounded-3xl shadow-2xl p-10 animate-fadeIn">
 
         <h1 className="text-4xl font-bold text-center mb-10 tracking-wide">
-           ตารางคอร์ทว่าง
+          ตารางคอร์ทว่าง
         </h1>
 
         {/* Date Picker */}
@@ -74,9 +69,7 @@ function AvailabilityBoard() {
 
         {date && (
           <div className="overflow-x-auto rounded-2xl">
-
             <table className="min-w-full text-sm text-center border-separate border-spacing-0">
-
               <thead>
                 <tr>
                   <th className="p-4 bg-white/20 backdrop-blur-md rounded-tl-2xl">
@@ -97,11 +90,8 @@ function AvailabilityBoard() {
               </thead>
 
               <tbody>
-                {times.map((time, index) => (
-                  <tr
-                    key={time}
-                    className="hover:bg-white/5 transition"
-                  >
+                {times.map((time) => (
+                  <tr key={time} className="hover:bg-white/5 transition">
                     <td className="p-4 font-semibold bg-white/5">
                       {time}
                     </td>
@@ -123,11 +113,9 @@ function AvailabilityBoard() {
                       );
                     })}
 
-                    {/* Available Count */}
                     <td className="p-4 font-bold text-green-400">
                       {getAvailableCount(time)} คอร์ท
                     </td>
-
                   </tr>
                 ))}
               </tbody>
