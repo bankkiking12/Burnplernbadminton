@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { db } from "../firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
 
@@ -15,19 +15,21 @@ function AvailabilityBoard() {
     "20:00 - 21:00","21:00 - 22:00",
   ];
 
-  useEffect(() => {
-    if (!date) return;
-    fetchBookings();
-  }, [date]);
+ useEffect(() => {
+  fetchBookings();
+}, [fetchBookings]);
 
-  const fetchBookings = async () => {
-    const q = query(
-      collection(db, "bookings"),
-      where("date", "==", date)
-    );
-    const res = await getDocs(q);
-    setBookings(res.docs.map((d) => d.data()));
-  };
+  const fetchBookings = useCallback(async () => {
+  if (!date) return;
+
+  const q = query(
+    collection(db, "bookings"),
+    where("date", "==", date)
+  );
+
+  const res = await getDocs(q);
+  setBookings(res.docs.map((d) => d.data()));
+}, [date]);
 
   const isBooked = (court, time) => {
     return bookings.some(
