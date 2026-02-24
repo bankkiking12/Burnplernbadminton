@@ -16,8 +16,20 @@ function AvailabilityBoard() {
   ];
 
  useEffect(() => {
+  if (!date) return;
+
+  const fetchBookings = async () => {
+    const q = query(
+      collection(db, "bookings"),
+      where("date", "==", date)
+    );
+
+    const res = await getDocs(q);
+    setBookings(res.docs.map((d) => d.data()));
+  };
+
   fetchBookings();
-}, [fetchBookings]);
+}, [date]);
 
   const fetchBookings = useCallback(async () => {
   if (!date) return;

@@ -26,9 +26,7 @@ function Booking() {
   ];
 
   useEffect(() => {
-    if (!date) return;
-    fetchSlots();
-  }, [date, court]);
+  if (!date) return;
 
   const fetchSlots = async () => {
     const q = query(
@@ -41,6 +39,9 @@ function Booking() {
     const booked = res.docs.map((d) => d.data().time);
     setSlots(booked);
   };
+
+  fetchSlots();
+}, [date, court]);
 
   const handleBooking = async () => {
     if (!date || !selected) {
@@ -77,7 +78,7 @@ function Booking() {
     });
 
     setSelected("");
-    fetchSlots();
+    setDate(date);
   };
 
   return (

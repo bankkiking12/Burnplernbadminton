@@ -10,36 +10,50 @@ import {
   orderBy,
   updateDoc,
 } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 import Swal from "sweetalert2";
 
 function MyBookings() {
   const [bookings, setBookings] = useState([]);
-  const user = auth.currentUser;
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
+  // ✅ โหลด user ให้ถูกต้อง
   useEffect(() => {
-    if (user) {
-      fetchBookings();
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+
+      if (currentUser) {
+        fetchBookings(currentUser);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // ✅ ย้ายขึ้นมาก่อนเรียกใช้
+  const fetchBookings = async (currentUser) => {
+    try {
+      const q = query(
+        collection(db, "bookings"),
+        where("userId", "==", currentUser.uid),
+        orderBy("createdAt", "desc")
+      );
+
+      const querySnapshot = await getDocs(q);
+
+      const data = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      setBookings(data);
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
     }
-  }, [user]);
-
-  const fetchBookings = async () => {
-    const q = query(
-      collection(db, "bookings"),
-      where("userId", "==", user.uid),
-      orderBy("createdAt", "desc")
-    );
-
-    const querySnapshot = await getDocs(q);
-
-    const data = querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-
-    setBookings(data);
   };
 
-  
   const handlePayment = async (booking) => {
     const confirm = await Swal.fire({
       title: "ยืนยันการชำระเงิน?",
@@ -56,11 +70,10 @@ function MyBookings() {
       });
 
       Swal.fire("ชำระเงินสำเร็จ 🎉", "", "success");
-      fetchBookings();
+      fetchBookings(user);
     }
   };
 
- 
   const handleCancel = async (booking) => {
     if (booking.status === "paid") {
       Swal.fire("ไม่สามารถยกเลิกได้", "รายการนี้ชำระเงินแล้ว", "info");
@@ -80,7 +93,7 @@ function MyBookings() {
     if (confirm.isConfirmed) {
       await deleteDoc(doc(db, "bookings", booking.id));
       Swal.fire("ยกเลิกสำเร็จ", "", "success");
-      fetchBookings();
+      fetchBookings(user);
     }
   };
 
@@ -99,6 +112,14 @@ function MyBookings() {
       </span>
     );
   };
+
+  if (loading) {
+    return <div className="p-10 text-center">Loading...</div>;
+  }
+
+  if (!user) {
+    return <div className="p-10 text-center">กรุณาเข้าสู่ระบบ</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 p-24">
@@ -139,7 +160,6 @@ function MyBookings() {
                 </div>
               </div>
 
-             
               {booking.status === "pending" && (
                 <div className="flex flex-col gap-2">
                   <button
