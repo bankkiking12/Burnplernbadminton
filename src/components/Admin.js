@@ -15,7 +15,7 @@ import Swal from "sweetalert2";
 
 function Admin() {
 
-  const [user, setUser] = useState(null);
+  const [, setUser] = useState(null); // แก้ตรงนี้
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState("");
@@ -25,7 +25,6 @@ function Admin() {
     paid: 0,
     revenue: 0
   });
-  
 
   const checkAdmin = async (currentUser) => {
 
@@ -112,7 +111,7 @@ function Admin() {
 
     return () => unsub();
 
-  }, [dateFilter]);
+  }, [dateFilter, fetchBookings]); // แก้ตรงนี้
 
   const handleDelete = async (id) => {
 
@@ -163,8 +162,6 @@ function Admin() {
           🛠 Admin Dashboard
         </h1>
 
-        {/* DASHBOARD */}
-
         <div className="grid grid-cols-3 gap-6 mb-8">
 
           <div className="bg-blue-100 p-6 rounded-xl text-center">
@@ -186,8 +183,6 @@ function Admin() {
 
         </div>
 
-        {/* FILTER */}
-
         <div className="mb-6">
 
           <input
@@ -198,8 +193,6 @@ function Admin() {
           />
 
         </div>
-
-        {/* TABLE */}
 
         <div className="overflow-x-auto">
 
@@ -227,11 +220,8 @@ function Admin() {
                 <tr key={b.id} className="border-t text-center">
 
                   <td className="p-3">{b.date}</td>
-
                   <td className="p-3">{b.time}</td>
-
                   <td className="p-3">{b.court}</td>
-
                   <td className="p-3">{b.price || "-"}</td>
 
                   <td className="p-3">
