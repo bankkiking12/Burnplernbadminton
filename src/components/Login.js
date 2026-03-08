@@ -15,9 +15,11 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [resetMode, setResetMode] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
 
-  
+  // เช็คว่าล็อกอินอยู่แล้วไหม
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -28,10 +30,11 @@ function Login() {
     return () => unsubscribe();
   }, [navigate]);
 
-  
+  // LOGIN
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
@@ -47,9 +50,11 @@ function Login() {
     } catch (err) {
       setError("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
     }
+
+    setLoading(false);
   };
 
-  
+  // RESET PASSWORD (Demo)
   const handleResetPassword = async () => {
     setError("");
 
@@ -82,14 +87,15 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-96">
-        <h2 className="text-2xl font-bold mb-6 text-center">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 px-4">
+      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+
+        <h2 className="text-3xl font-bold mb-6 text-center">
           {resetMode ? "รีเซ็ตรหัสผ่าน" : "เข้าสู่ระบบ"}
         </h2>
 
         {error && (
-          <div className="bg-red-100 text-red-600 p-2 mb-4 rounded text-sm">
+          <div className="bg-red-100 text-red-600 p-3 mb-4 rounded text-sm text-center">
             {error}
           </div>
         )}
@@ -97,20 +103,23 @@ function Login() {
         {!resetMode ? (
           <>
             <form onSubmit={handleLogin}>
+
+              {/* EMAIL */}
               <input
                 type="email"
                 placeholder="อีเมล"
-                className="w-full mb-4 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full mb-4 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
 
+              {/* PASSWORD */}
               <div className="relative mb-2">
                 <input
                   type={showPassword ? "text" : "password"}
                   placeholder="รหัสผ่าน"
-                  className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -119,13 +128,14 @@ function Login() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 top-2 text-gray-500"
+                  className="absolute right-3 top-3 text-gray-500 text-lg"
                 >
                   {showPassword ? "🙈" : "👁"}
                 </button>
               </div>
 
-              <div className="text-right mb-4">
+              {/* FORGOT PASSWORD */}
+              <div className="text-right mb-5">
                 <button
                   type="button"
                   onClick={() => setResetMode(true)}
@@ -135,27 +145,32 @@ function Login() {
                 </button>
               </div>
 
+              {/* LOGIN BUTTON */}
               <button
                 type="submit"
-                className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 transition"
+                disabled={loading}
+                className="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition font-semibold"
               >
-                เข้าสู่ระบบ
+                {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
               </button>
+
             </form>
 
-            <p className="text-center mt-4 text-sm">
+            <p className="text-center mt-6 text-sm">
               ยังไม่มีบัญชี?{" "}
-              <Link to="/register" className="text-blue-500 hover:underline">
+              <Link to="/register" className="text-blue-500 hover:underline font-semibold">
                 สมัครสมาชิก
               </Link>
             </p>
           </>
         ) : (
           <>
+            {/* RESET MODE */}
+
             <input
               type="email"
               placeholder="อีเมล"
-              className="w-full mb-4 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-400"
+              className="w-full mb-4 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -163,26 +178,27 @@ function Login() {
             <input
               type="password"
               placeholder="รหัสใหม่"
-              className="w-full mb-4 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-400"
+              className="w-full mb-4 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
             />
 
             <button
               onClick={handleResetPassword}
-              className="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600 transition"
+              className="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition font-semibold"
             >
               เปลี่ยนรหัสผ่าน
             </button>
 
             <button
               onClick={() => setResetMode(false)}
-              className="w-full mt-3 text-sm text-gray-500 hover:underline"
+              className="w-full mt-4 text-sm text-gray-500 hover:underline"
             >
               กลับไปหน้าเข้าสู่ระบบ
             </button>
           </>
         )}
+
       </div>
     </div>
   );

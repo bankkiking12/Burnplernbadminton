@@ -12,6 +12,7 @@ import {
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import Swal from "sweetalert2";
+import jsQR from "jsqr";
 
 function MyBookings() {
   const [bookings, setBookings] = useState([]);
@@ -37,7 +38,6 @@ function MyBookings() {
 
       setBookings(data);
     } catch (error) {
-      console.error("Error fetching bookings:", error);
       Swal.fire("เกิดข้อผิดพลาด", "โหลดข้อมูลไม่สำเร็จ", "error");
     }
   }, []);
@@ -55,33 +55,116 @@ function MyBookings() {
     return () => unsubscribe();
   }, [fetchBookings]);
 
-  const handlePayment = async (booking) => {
-    const confirm = await Swal.fire({
-      title: "ยืนยันการชำระเงิน?",
-      text: `ยอดชำระ ${booking.price} บาท`,
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonColor: "#16a34a",
-      confirmButtonText: "ชำระเงิน",
+  const checkQRInImage = (file) => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      img.src = e.target.result;
+    };
+
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      canvas.width = img.width;
+      canvas.height = img.height;
+
+      ctx.drawImage(img, 0, 0);
+
+      const imageData = ctx.getImageData(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+
+      const code = jsQR(
+        imageData.data,
+        imageData.width,
+        imageData.height
+      );
+
+      resolve(code !== null);
+    };
+
+    reader.readAsDataURL(file);
+  });
+};
+
+const handlePayment = async (booking) => {
+
+  const { value: file } = await Swal.fire({
+    title: "ชำระเงินผ่าน PromptPay",
+    html: `
+      <div style="display:flex;flex-direction:column;align-items:center;text-align:center">
+
+        <img 
+          src="/promptpay.jpg" 
+          style="width:260px;border-radius:12px;margin-bottom:15px"
+        />
+
+        <p style="font-size:18px;font-weight:bold;margin:10px 0">
+          ยอดชำระ ${booking.price} บาท
+        </p>
+
+        <p style="color:gray;font-size:14px">
+          สแกน QR แล้วอัปโหลดสลิป
+        </p>
+
+      </div>
+    `,
+    input: "file",
+    inputAttributes: {
+      accept: "image/*"
+    },
+    confirmButtonText: "อัปโหลดสลิป",
+    cancelButtonText: "ยกเลิก",
+    showCancelButton: true,
+    confirmButtonColor: "#16a34a",
+  });
+
+  if (!file) return;
+
+  Swal.showLoading();
+
+  const hasQR = await checkQRInImage(file);
+
+  if (!hasQR) {
+    Swal.fire(
+      "ไม่พบ QR Code",
+      "กรุณาอัปโหลดสลิปที่มี QR Code",
+      "error"
+    );
+    return;
+  }
+
+  try {
+
+    await updateDoc(doc(db, "bookings", booking.id), {
+      status: "paid",
     });
 
-    if (confirm.isConfirmed) {
-      try {
-        await updateDoc(doc(db, "bookings", booking.id), {
-          status: "paid",
-        });
+    Swal.fire(
+      "ชำระเงินสำเร็จ 🎉",
+      "ตรวจพบ QR Code ในสลิป",
+      "success"
+    );
 
-        Swal.fire("ชำระเงินสำเร็จ 🎉", "", "success");
+    if (user) fetchBookings(user);
 
-        if (user) {
-          fetchBookings(user);
-        }
-      } catch (error) {
-        console.error(error);
-        Swal.fire("ผิดพลาด", "ไม่สามารถอัปเดตสถานะได้", "error");
-      }
-    }
-  };
+  } catch (error) {
+
+    Swal.fire(
+      "เกิดข้อผิดพลาด",
+      "ไม่สามารถบันทึกการชำระเงินได้",
+      "error"
+    );
+
+  }
+};
+
 
   const handleCancel = async (booking) => {
     if (booking.status === "paid") {
@@ -91,106 +174,125 @@ function MyBookings() {
 
     const confirm = await Swal.fire({
       title: "ยืนยันการยกเลิก?",
-      text: "คุณต้องการยกเลิกการจองนี้หรือไม่",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#dc2626",
-      cancelButtonColor: "#6b7280",
       confirmButtonText: "ยกเลิกการจอง",
     });
 
     if (confirm.isConfirmed) {
-      try {
-        await deleteDoc(doc(db, "bookings", booking.id));
-        Swal.fire("ยกเลิกสำเร็จ", "", "success");
-
-        if (user) {
-          fetchBookings(user);
-        }
-      } catch (error) {
-        console.error(error);
-        Swal.fire("ผิดพลาด", "ไม่สามารถลบรายการได้", "error");
-      }
+      await deleteDoc(doc(db, "bookings", booking.id));
+      Swal.fire("ยกเลิกสำเร็จ", "", "success");
+      if (user) fetchBookings(user);
     }
-  };
-
-  const getStatusUI = (status) => {
-    if (status === "paid") {
-      return (
-        <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-semibold">
-          ✅ ชำระเงินแล้ว
-        </span>
-      );
-    }
-
-    return (
-      <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm font-semibold">
-        ⏳ รอชำระเงิน
-      </span>
-    );
   };
 
   if (loading) {
-    return <div className="p-10 text-center">Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+        Loading...
+      </div>
+    );
   }
 
   if (!user) {
-    return <div className="p-10 text-center">กรุณาเข้าสู่ระบบ</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+        กรุณาเข้าสู่ระบบ
+      </div>
+    );
   }
 
+  const paid = bookings.filter((b) => b.status === "paid").length;
+  const pending = bookings.length - paid;
+
   return (
-    <div className="min-h-screen bg-gray-100 p-24">
-      <h1 className="text-3xl font-bold mb-6 text-center">
-        📖 ประวัติการจองของฉัน
-      </h1>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black p-24 text-white">
 
-      {bookings.length === 0 ? (
-        <div className="bg-white p-6 rounded-xl shadow text-center">
-          ยังไม่มีรายการจอง
+      <div className="max-w-5xl mx-auto space-y-8 animate-fadeIn">
+
+        <h1 className="text-4xl font-bold text-center mb-8">
+          📖 ประวัติการจองของฉัน
+        </h1>
+
+        {/* Summary */}
+        <div className="grid md:grid-cols-3 gap-6">
+
+          <div className="bg-white/10 backdrop-blur-md p-6 rounded-2xl text-center shadow-lg">
+            <p className="text-gray-400">ทั้งหมด</p>
+            <p className="text-3xl font-bold mt-2">{bookings.length}</p>
+          </div>
+
+          <div className="bg-green-500/20 p-6 rounded-2xl text-center shadow-lg">
+            <p className="text-green-300">ชำระแล้ว</p>
+            <p className="text-3xl font-bold text-green-400 mt-2">{paid}</p>
+          </div>
+
+          <div className="bg-yellow-500/20 p-6 rounded-2xl text-center shadow-lg">
+            <p className="text-yellow-300">รอชำระ</p>
+            <p className="text-3xl font-bold text-yellow-400 mt-2">{pending}</p>
+          </div>
+
         </div>
-      ) : (
-        <div className="grid gap-4 max-w-4xl mx-auto">
-          {bookings.map((booking) => (
-            <div
-              key={booking.id}
-              className="bg-white p-6 rounded-xl shadow-lg flex justify-between items-center border"
-            >
-              <div>
-                <p className="font-bold text-lg">
-                  🏸 คอร์ท {booking.court}
-                </p>
-                <p className="text-gray-600">📅 {booking.date}</p>
-                <p className="text-gray-600">⏰ {booking.time}</p>
-                <p className="text-gray-800 font-semibold mt-2">
-                  💰 {booking.price} บาท
-                </p>
 
-                <div className="mt-2">
-                  {getStatusUI(booking.status)}
+        {/* Booking List */}
+        {bookings.length === 0 ? (
+          <div className="bg-white/10 backdrop-blur-md p-10 rounded-2xl text-center">
+            ยังไม่มีรายการจอง
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {bookings.map((booking) => (
+              <div
+                key={booking.id}
+                className="bg-white/10 backdrop-blur-lg border border-white/20 p-6 rounded-2xl shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center hover:scale-[1.02] transition-all duration-300"
+              >
+                <div>
+                  <p className="text-xl font-bold">
+                    🏸 คอร์ท {booking.court}
+                  </p>
+                  <p className="text-gray-300 mt-1">📅 {booking.date}</p>
+                  <p className="text-gray-300">⏰ {booking.time}</p>
+                  <p className="text-lg font-semibold mt-2 text-green-400">
+                    💰 {booking.price} บาท
+                  </p>
+
+                  <div className="mt-3">
+                    {booking.status === "paid" ? (
+                      <span className="px-4 py-1 rounded-full text-sm bg-green-500/30 text-green-400 border border-green-400">
+                        ✅ ชำระเงินแล้ว
+                      </span>
+                    ) : (
+                      <span className="px-4 py-1 rounded-full text-sm bg-yellow-500/30 text-yellow-400 border border-yellow-400">
+                        ⏳ รอชำระเงิน
+                      </span>
+                    )}
+                  </div>
                 </div>
+
+                {booking.status === "pending" && (
+                  <div className="flex gap-3 mt-4 md:mt-0">
+                    <button
+                      onClick={() => handlePayment(booking)}
+                      className="bg-green-500 hover:bg-green-600 px-5 py-2 rounded-xl font-semibold shadow-lg shadow-green-500/30 transition hover:scale-105"
+                    >
+                      💳 ชำระเงิน
+                    </button>
+
+                    <button
+                      onClick={() => handleCancel(booking)}
+                      className="bg-red-500 hover:bg-red-600 px-5 py-2 rounded-xl font-semibold shadow-lg shadow-red-500/30 transition hover:scale-105"
+                    >
+                      🗑 ยกเลิก
+                    </button>
+                  </div>
+                )}
               </div>
+            ))}
+          </div>
+        )}
 
-              {booking.status === "pending" && (
-                <div className="flex flex-col gap-2">
-                  <button
-                    onClick={() => handlePayment(booking)}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
-                  >
-                    💳 ชำระเงิน
-                  </button>
-
-                  <button
-                    onClick={() => handleCancel(booking)}
-                    className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
-                  >
-                    ยกเลิก
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      </div>
     </div>
   );
 }
