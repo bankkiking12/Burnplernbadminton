@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { auth, db } from "../firebase";
 import {
   collection,
@@ -46,7 +46,7 @@ function Admin() {
     return true;
   };
 
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
 
     setLoading(true);
 
@@ -88,7 +88,7 @@ function Admin() {
 
     setLoading(false);
 
-  };
+  }, [dateFilter]);
 
   useEffect(() => {
 
