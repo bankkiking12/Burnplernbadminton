@@ -146,21 +146,21 @@ function Navbar() {
                       to="/dashboard"
                       className="block px-5 py-3 hover:bg-gray-100 transition"
                     >
-                      👤 Dashboard
+                       Dashboard
                     </Link>
 
                     <Link
                       to="/my-bookings"
                       className="block px-5 py-3 hover:bg-gray-100 transition"
                     >
-                      📖 My Bookings
+                       My Bookings
                     </Link>
 
                     <button
                       onClick={handleLogout}
                       className="w-full text-left px-5 py-3 hover:bg-red-50 text-red-600 transition"
                     >
-                      🚪 Logout
+                       Logout
                     </button>
                   </div>
                 )}

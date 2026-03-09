@@ -85,7 +85,7 @@ function UserDashboard() {
         <div className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-3xl p-8 shadow-2xl">
 
           <h1 className="text-3xl font-bold mb-4 flex items-center gap-2">
-            👤 ข้อมูลผู้ใช้
+             ข้อมูลผู้ใช้
           </h1>
 
           <p className="text-gray-300">
@@ -174,21 +174,21 @@ function UserDashboard() {
             to="/booking"
             className="bg-green-500 hover:bg-green-600 px-6 py-3 rounded-xl font-semibold shadow-lg shadow-green-500/30 transition hover:scale-105"
           >
-            ➕ จองคอร์ทใหม่
+             จองคอร์ทใหม่
           </Link>
 
           <Link
             to="/my-bookings"
             className="bg-blue-500 hover:bg-blue-600 px-6 py-3 rounded-xl font-semibold shadow-lg shadow-blue-500/30 transition hover:scale-105"
           >
-            📖 ดูประวัติการจอง
+             ดูประวัติการจอง
           </Link>
 
           <Link
             to="/board"
             className="bg-purple-500 hover:bg-purple-600 px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition hover:scale-105"
           >
-            📅 ดูตารางคอร์ทว่าง
+             ดูตารางคอร์ทว่าง
           </Link>
 
         </div>

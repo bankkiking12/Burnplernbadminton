@@ -342,7 +342,7 @@ transition duration-300"
           to="/booking"
           className="bg-gradient-to-r from-green-500 to-green-600 px-12 py-5 rounded-full text-lg font-semibold shadow-xl hover:scale-105 hover:shadow-green-400/40 transition duration-300"
         >
-          🚀 เริ่มจองตอนนี้
+           เริ่มจองตอนนี้
         </Link>
       </section>
 

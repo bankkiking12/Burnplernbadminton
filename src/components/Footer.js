@@ -87,7 +87,7 @@ function Footer() {
                 href="mailto:support@trumq.com"
                 className="hover:text-white transition duration-300"
               >
-                support@trumq.com
+                https://burnplernbadminton.vercel.app
               </a>
             </li>
           </ul>

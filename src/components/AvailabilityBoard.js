@@ -75,7 +75,7 @@ function AvailabilityBoard() {
         <div className="text-center mb-10">
 
           <h1 className="text-4xl font-bold tracking-wide mb-2">
-            📅 ตารางคอร์ทว่าง
+             ตารางคอร์ทว่าง
           </h1>
 
           <p className="text-gray-400 text-sm">

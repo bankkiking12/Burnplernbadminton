@@ -90,7 +90,7 @@ setSelected("");
       <div className="max-w-6xl mx-auto backdrop-blur-lg bg-white/10 border border-white/20 rounded-3xl shadow-2xl p-10 animate-fadeIn">
 
         <h2 className="text-4xl font-bold text-center mb-10 tracking-wide">
-          🏸 จองคอร์ทแบดมินตัน
+           จองคอร์ทแบดมินตัน
         </h2>
 
         {/* Date + Court */}
@@ -156,7 +156,7 @@ setSelected("");
               
                 {!isBooked && (
                   <p className="text-center text-xs mt-2 text-green-300">
-                    💰 {pricePerHour} บาท
+                     {pricePerHour} บาท
                   </p>
                 )}
 

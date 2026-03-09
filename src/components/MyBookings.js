@@ -274,7 +274,7 @@ function MyBookings() {
       <div className="max-w-5xl mx-auto space-y-8 animate-fadeIn">
 
         <h1 className="text-4xl font-bold text-center mb-8">
-          📖 ประวัติการจองของฉัน
+          ประวัติการจองของฉัน
         </h1>
 
         <div className="grid md:grid-cols-3 gap-6">
@@ -309,7 +309,7 @@ function MyBookings() {
               >
                 <div>
                   <p className="text-xl font-bold">
-                    🏸 คอร์ท {booking.court}
+                     คอร์ท {booking.court}
                   </p>
                   <p className="text-gray-300 mt-1">📅 {booking.date}</p>
                   <p className="text-gray-300">⏰ {booking.time}</p>
@@ -331,7 +331,7 @@ function MyBookings() {
 
                   {booking.status === "pending" && countdowns[booking.id] !== undefined && (
                     <p className="text-red-400 mt-2 text-sm">
-                      ⏳ เวลาชำระเงินเหลือ {countdowns[booking.id]} วินาที
+                       เวลาชำระเงินเหลือ {countdowns[booking.id]} วินาที
                     </p>
                   )}
 
@@ -343,14 +343,14 @@ function MyBookings() {
                       onClick={() => handlePayment(booking)}
                       className="bg-green-500 hover:bg-green-600 px-5 py-2 rounded-xl font-semibold shadow-lg shadow-green-500/30 transition hover:scale-105"
                     >
-                      💳 ชำระเงิน
+                       ชำระเงิน
                     </button>
 
                     <button
                       onClick={() => handleCancel(booking)}
                       className="bg-red-500 hover:bg-red-600 px-5 py-2 rounded-xl font-semibold shadow-lg shadow-red-500/30 transition hover:scale-105"
                     >
-                      🗑 ยกเลิก
+                       ยกเลิก
                     </button>
                   </div>
                 )}
