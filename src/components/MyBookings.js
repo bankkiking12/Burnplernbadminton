@@ -19,6 +19,9 @@ function MyBookings() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // ⭐ ระบบนับถอยหลัง
+  const [countdowns, setCountdowns] = useState({});
+
   const fetchBookings = useCallback(async (currentUser) => {
     if (!currentUser) return;
 
@@ -37,6 +40,10 @@ function MyBookings() {
       }));
 
       setBookings(data);
+
+      // ⭐ เพิ่ม countdown สำหรับ booking ที่ pending
+    setBookings(data);
+
     } catch (error) {
       Swal.fire("เกิดข้อผิดพลาด", "โหลดข้อมูลไม่สำเร็จ", "error");
     }
@@ -55,116 +62,171 @@ function MyBookings() {
     return () => unsubscribe();
   }, [fetchBookings]);
 
+  // ⭐ ลดเวลา countdown ทุก 1 วินาที
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCountdowns((prev) => {
+        const updated = { ...prev };
+
+        Object.keys(updated).forEach((id) => {
+          if (updated[id] > 0) {
+            updated[id] -= 1;
+          }
+        });
+
+        return updated;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // ⭐ ตรวจหมดเวลา
+  useEffect(() => {
+    const checkExpire = async () => {
+      for (const id in countdowns) {
+        if (countdowns[id] === 0) {
+          try {
+            await deleteDoc(doc(db, "bookings", id));
+
+            Swal.fire(
+              "หมดเวลาชำระเงิน",
+              "รายการถูกยกเลิกอัตโนมัติ",
+              "warning"
+            );
+
+            if (user) fetchBookings(user);
+
+            setCountdowns((prev) => {
+              const updated = { ...prev };
+              delete updated[id];
+              return updated;
+            });
+
+          } catch (error) {}
+        }
+      }
+    };
+
+    checkExpire();
+  }, [countdowns, user, fetchBookings]);
+
   const checkQRInImage = (file) => {
-  return new Promise((resolve) => {
-    const img = new Image();
-    const reader = new FileReader();
+    return new Promise((resolve) => {
+      const img = new Image();
+      const reader = new FileReader();
 
-    reader.onload = (e) => {
-      img.src = e.target.result;
-    };
+      reader.onload = (e) => {
+        img.src = e.target.result;
+      };
 
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
 
-      canvas.width = img.width;
-      canvas.height = img.height;
+        canvas.width = img.width;
+        canvas.height = img.height;
 
-      ctx.drawImage(img, 0, 0);
+        ctx.drawImage(img, 0, 0);
 
-      const imageData = ctx.getImageData(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      );
+        const imageData = ctx.getImageData(
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
 
-      const code = jsQR(
-        imageData.data,
-        imageData.width,
-        imageData.height
-      );
+        const code = jsQR(
+          imageData.data,
+          imageData.width,
+          imageData.height
+        );
 
-      resolve(code !== null);
-    };
+        resolve(code !== null);
+      };
 
-    reader.readAsDataURL(file);
-  });
-};
+      reader.readAsDataURL(file);
+    });
+  };
 
-const handlePayment = async (booking) => {
+  const handlePayment = async (booking) => {
 
-  const { value: file } = await Swal.fire({
-    title: "ชำระเงินผ่าน PromptPay",
-    html: `
-      <div style="display:flex;flex-direction:column;align-items:center;text-align:center">
+    setCountdowns((prev) => ({
+      ...prev,
+      [booking.id]: 180
+    }));
 
-        <img 
-          src="/promptpay.jpg" 
-          style="width:260px;border-radius:12px;margin-bottom:15px"
-        />
+    const { value: file } = await Swal.fire({
+      title: "ชำระเงินผ่าน PromptPay",
+      html: `
+        <div style="display:flex;flex-direction:column;align-items:center;text-align:center">
 
-        <p style="font-size:18px;font-weight:bold;margin:10px 0">
-          ยอดชำระ ${booking.price} บาท
-        </p>
+          <img 
+            src="/promptpay.jpg" 
+            style="width:260px;border-radius:12px;margin-bottom:15px"
+          />
 
-        <p style="color:gray;font-size:14px">
-          สแกน QR แล้วอัปโหลดสลิป
-        </p>
+          <p style="font-size:18px;font-weight:bold;margin:10px 0">
+            ยอดชำระ ${booking.price} บาท
+          </p>
+          
+        
 
-      </div>
-    `,
-    input: "file",
-    inputAttributes: {
-      accept: "image/*"
-    },
-    confirmButtonText: "อัปโหลดสลิป",
-    cancelButtonText: "ยกเลิก",
-    showCancelButton: true,
-    confirmButtonColor: "#16a34a",
-  });
+          <p style="color:gray;font-size:14px">
+            สแกน QR แล้วอัปโหลดสลิป
+          </p>
 
-  if (!file) return;
-
-  Swal.showLoading();
-
-  const hasQR = await checkQRInImage(file);
-
-  if (!hasQR) {
-    Swal.fire(
-      "ไม่พบ QR Code",
-      "กรุณาอัปโหลดสลิปที่มี QR Code",
-      "error"
-    );
-    return;
-  }
-
-  try {
-
-    await updateDoc(doc(db, "bookings", booking.id), {
-      status: "paid",
+        </div>
+      `,
+      input: "file",
+      inputAttributes: {
+        accept: "image/*"
+      },
+      confirmButtonText: "อัปโหลดสลิป",
+      cancelButtonText: "ยกเลิก",
+      showCancelButton: true,
+      confirmButtonColor: "#16a34a",
     });
 
-    Swal.fire(
-      "ชำระเงินสำเร็จ 🎉",
-      "ตรวจพบ QR Code ในสลิป",
-      "success"
-    );
+    if (!file) return;
 
-    if (user) fetchBookings(user);
+    Swal.showLoading();
 
-  } catch (error) {
+    const hasQR = await checkQRInImage(file);
 
-    Swal.fire(
-      "เกิดข้อผิดพลาด",
-      "ไม่สามารถบันทึกการชำระเงินได้",
-      "error"
-    );
+    if (!hasQR) {
+      Swal.fire(
+        "ไม่พบ QR Code",
+        "กรุณาอัปโหลดสลิปที่มี QR Code",
+        "error"
+      );
+      return;
+    }
 
-  }
-};
+    try {
 
+      await updateDoc(doc(db, "bookings", booking.id), {
+        status: "paid",
+      });
+
+      Swal.fire(
+        "ชำระเงินสำเร็จ 🎉",
+        "ตรวจพบ QR Code ในสลิป",
+        "success"
+      );
+
+      if (user) fetchBookings(user);
+
+    } catch (error) {
+
+      Swal.fire(
+        "เกิดข้อผิดพลาด",
+        "ไม่สามารถบันทึกการชำระเงินได้",
+        "error"
+      );
+
+    }
+  };
 
   const handleCancel = async (booking) => {
     if (booking.status === "paid") {
@@ -215,7 +277,6 @@ const handlePayment = async (booking) => {
           📖 ประวัติการจองของฉัน
         </h1>
 
-        {/* Summary */}
         <div className="grid md:grid-cols-3 gap-6">
 
           <div className="bg-white/10 backdrop-blur-md p-6 rounded-2xl text-center shadow-lg">
@@ -235,7 +296,6 @@ const handlePayment = async (booking) => {
 
         </div>
 
-        {/* Booking List */}
         {bookings.length === 0 ? (
           <div className="bg-white/10 backdrop-blur-md p-10 rounded-2xl text-center">
             ยังไม่มีรายการจอง
@@ -268,6 +328,13 @@ const handlePayment = async (booking) => {
                       </span>
                     )}
                   </div>
+
+                  {booking.status === "pending" && countdowns[booking.id] !== undefined && (
+                    <p className="text-red-400 mt-2 text-sm">
+                      ⏳ เวลาชำระเงินเหลือ {countdowns[booking.id]} วินาที
+                    </p>
+                  )}
+
                 </div>
 
                 {booking.status === "pending" && (
